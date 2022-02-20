@@ -1,5 +1,13 @@
 ;partners: dylanjb5, aadim2
-; The code presented below completes the reverse polish notation stack calculator. My part of the code reads and echos a character each time, detecting if theres an equal sign or space. Spaces are ignored, while equals signs branches off to test if the STACK_TOP and STACK_START differ by 1. If this is not the case, it prints an error using predefined stored data. If this is the case, the value is popped and then loaded into R5 and R3 to be printed to the screen in hexadecimal. The subroutine that accomplishes this was created last MP. Other characters will be sorted via ASCII tests between operators or operands. If it is an operator, it will pop two values and store them in R3 and R4 to be the inputs for the corresponding operator's subroutine. The result will be pushed to the stack. If the R5 POP flag is 1 during any of this, it branches to INVALID. After failing all operator tests, the character will be pushed to the stack and then the next input will be read.
+; The code presented below completes the reverse polish notation stack calculator. 
+;My part of the code reads and echos a character each time, detecting if theres an equal sign or space. 
+;Spaces are ignored, while equals signs branches off to test if the STACK_TOP and STACK_START differ by 1.
+;If this is not the case, it prints an error using predefined stored data. If this is the case, the value is 
+;popped and then loaded into R5 and R3 to be printed to the screen in hexadecimal. The subroutine that accomplishes 
+;this was created last MP. Other characters will be sorted via ASCII tests between operators or operands. 
+;If it is an operator, it will pop two values and store them in R3 and R4 to be the inputs for the corresponding operator's subroutine. 
+;The result will be pushed to the stack. If the R5 POP flag is 1 during any of this, it branches to INVALID. After failing all operator tests, 
+;the character will be pushed to the stack and then the next input will be read.
 ;
 .ORIG x3000
 
@@ -248,22 +256,34 @@ MIN_SaveR3	.BLKW #1
 
 MUL	 
 	AND R0, R0, #0		; Clear R0
+	ST R3, MUL_SaveR3	; Save R3
 	ST R4, MUL_SaveR4	; Save R4
+	ADD R4, R4, #0
+	BRzp MU				; If R4 is non negative, continue to MU
+	NOT R4, R4
+	ADD R4, R4, #1		; R4 gets twos complement of R4
+	NOT R3, R3
+	ADD R3, R3, #1		; R3 gets twos comlement of R3 
+						;(negative gets shifted over to addend instead of counter)	
 MU
 	ADD R4, R4, #-1		; decrement R4
 	BRn LEAVE			; If R4 is now negative, exit
 	ADD R0, R0, R3		; ADD R3 and R0
 	BR MU
+	
 LEAVE
 	LD R4, MUL_SaveR4	; Restore R4
+	LD R3, MUL_SaveR3	; Restore R3
 	RET
 
 MUL_SaveR4 .BLKW #1	
+MUL_SaveR3 .BLKW #1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;input R3, R4 ??? R3/R4
+;input R3, R4 ??? R4/R3
 ;out R0
 DIV	
 	AND R0, R0, #0		; Clear R0
+	ST R4, DIV_SaveR4	; Store R4
 DI
 	ST R0, DIV_SaveR0	; Caller save R0
 	ST R7, DIV_SaveR7	; Caller save R7
@@ -271,13 +291,20 @@ DI
 	LD R7, DIV_SaveR7	; Restore R7
 	AND R4, R4, #0		; R4 will get the difference R0	
 	ADD R4, R4, R0
+	BRn	LESSONE			; if R4<R3, leave and return 0
 	LD R0, DIV_SaveR0	; Restore R0
 	ADD R0, R0, #1		; Increment R0
 	ADD R4, R4, #0	
 	BRp DI
 
+	RET
+
+LESSONE
+	LD R0, DIV_SaveR0
+	LD R4, DIV_SaveR4
 	RET	
-	
+
+DIV_SaveR4	.BLKW #1	;	
 DIV_SaveR0	.BLKW #1	;
 DIV_SaveR7	.BLKW #1 	;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
